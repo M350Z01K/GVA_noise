@@ -7,4 +7,4 @@ Road traffic noise exposure assessment of the population in canton Geneva
 - [population layer](https://dam-api.bfs.admin.ch/hub/api/dam/assets/27965868/master)
 - [nighttime road traffic noise layer](https://data.geo.admin.ch/ch.bafu.laerm-strassenlaerm_nacht/data.zip)
 
-## Which operations does the script perform?
+## Which operations does the R script perform?
