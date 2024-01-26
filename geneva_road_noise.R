@@ -15,7 +15,7 @@ gva = st_transform(gva, st_crs("EPSG:2056"))
 
 
 # read the file, get the relevant variables, transform it to sf, clip it to the canton of interest
-statpop = read_delim("data/ag-b-00.03-vz2022statpop/STATPOP2022.csv", delim = ";", escape_double = FALSE, trim_ws = TRUE)
+statpop = readr::read_delim("data/ag-b-00.03-vz2022statpop/STATPOP2022.csv", delim = ";", escape_double = FALSE, trim_ws = TRUE)
 statpop = statpop[, c("B22BTOT", # whole population
                       "B22BWTOT", # female population
                       "B22BMTOT", # male population
@@ -37,8 +37,14 @@ road_noise = raster("data/STRASSENLAERM_Nacht/StrassenLaerm_Nacht_LV95.tif")
 # get only the geneva area
 road_noise = crop(road_noise, gva)
 
-# extract the noise estimates at the statpop coordinates
+
+# plot the data
 xy = SpatialPoints(st_coordinates(statpop$geometry))
+plot(road_noise)
+plot(xy, add = T, pch = ".")
+
+
+# extract the noise estimates at the statpop coordinates
 road_noise = raster::extract(road_noise, xy)
 road_noise = data.frame(road_noise,
                         xy, 
@@ -64,7 +70,7 @@ colnames(road_noise_df) = dplyr::recode(colnames(road_noise_df),
 # and aggregate to get number of exposed by noise levels
 # TODO get conversion factor Lday -> Lden (table 2a Brink et al.) +8.3dB (Lnight,b -> Lden,b)
 road_noise_geneva = aggregate(road_noise_df[, c('pop_tot', 'pop_females', 'pop_males', 'pop_foreigners', 'pop_swiss')], by = list(road_night = road_noise_df$road_noise), FUN = sum)
-road_noise_geneva[, "Lden"] = road_noise_geneva[, "road_night"]+8
+road_noise_geneva[, "Lden"] = road_noise_geneva[, "road_night"]+8.3
 
 
 # get categories
@@ -74,23 +80,26 @@ road_noise_geneva[, 'exposure_groups'] = cut(road_noise_geneva[,"Lden"] , breaks
 # aggregate
 road_noise_geneva_agg = aggregate(road_noise_geneva[, c('pop_tot', 'pop_females', 'pop_males', 'pop_foreigners', 'pop_swiss')], by = list(exp_group = road_noise_geneva$exposure_groups), FUN = sum)
 
+# calculate the proportion of exposed for each category
+road_noise_geneva_agg[c('prop_females', "prop_males", "prop_foreigners", "prop_swiss")] = apply(road_noise_geneva_agg[, c("pop_females", "pop_males", "pop_foreigners", "pop_swiss")], 2, function(x) (x/road_noise_geneva_agg$pop_tot)*100)
 
-road_noise_geneva_agg[c('prop_females', "prop_males", "prop_foreigners", "prop_swiss")] = apply(road_noise_geneva_agg[, c("pop_females", "pop_males", "pop_foreigners", "pop_swiss")], 2, function(x) x/road_noise_geneva_agg$pop_tot)
+
+# reshape
+road_noise_geneva_agg = tidyr::gather(road_noise_geneva_agg[, -grep('pop', colnames(road_noise_geneva_agg))], cat, prop,  prop_females:prop_swiss)
+road_noise_geneva_agg$cat = factor(road_noise_geneva_agg$cat, levels = c('prop_females', "prop_males", "prop_foreigners", "prop_swiss"))
 
 
+# plot
 
-barplot(t(as.matrix(road_noise_geneva_agg[c('prop_females', "prop_males", "prop_foreigners", "prop_swiss")])), beside = T)
+bp = ggplot(road_noise_geneva_agg, aes(fill=cat, y=prop, x=exp_group)) + 
+      geom_bar(position="dodge", stat="identity") +
+      xlab('Noise level [dB]') +
+      ylab('Proportion exposed [%]')+
+      theme_bw()
+
 # TODO
 # analysis was focusing on the canton... 
 # run the same by municipalities
-
-
-
-
-
-
-
-
 
 
 
