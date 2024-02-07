@@ -3,11 +3,11 @@ library(ggplot2)
 library(raster)
 library(prettymapr)
 
-# make sure we are working in the right directory
-setwd('C:/Users/hheri/Projects/GVA_noise/')
+# load the data
+load("data.Rdata")
 
-# import canton shapefiles
-can = st_read("data/swissBOUNDARIES3D_1_5_TLM_KANTONSGEBIET.shp")
+# # import canton shapefiles
+# can = st_read("data/swissBOUNDARIES3D_1_5_TLM_KANTONSGEBIET.shp")
 
 # create a subset of polygons to clip according to canton of interest
 gva = subset(can, KANTONSNUM == 25)
@@ -15,7 +15,7 @@ gva = st_transform(gva, st_crs("EPSG:2056"))
 
 
 # read the file, get the relevant variables, transform it to sf, clip it to the canton of interest
-statpop = readr::read_delim("data/ag-b-00.03-vz2022statpop/STATPOP2022.csv", delim = ";", escape_double = FALSE, trim_ws = TRUE)
+# statpop = readr::read_delim("data/ag-b-00.03-vz2022statpop/STATPOP2022.csv", delim = ";", escape_double = FALSE, trim_ws = TRUE)
 statpop = statpop[, c("B22BTOT", # whole population
                       "B22BWTOT", # female population
                       "B22BMTOT", # male population
@@ -32,7 +32,7 @@ statpop_df = data.frame(st_drop_geometry(statpop), st_coordinates(statpop))
 
 # import road traffic noise
 
-road_noise = raster("data/STRASSENLAERM_Nacht/StrassenLaerm_Nacht_LV95.tif")
+# road_noise = raster("data/STRASSENLAERM_Nacht/StrassenLaerm_Nacht_LV95.tif")
 
 # get only the geneva area
 road_noise = crop(road_noise, gva)
@@ -90,7 +90,6 @@ road_noise_geneva_agg$cat = factor(road_noise_geneva_agg$cat, levels = c('prop_f
 
 
 # plot
-
 bp = ggplot(road_noise_geneva_agg, aes(fill=cat, y=prop, x=exp_group)) + 
       geom_bar(position="dodge", stat="identity") +
       xlab('Noise level [dB]') +
@@ -102,32 +101,7 @@ bp = ggplot(road_noise_geneva_agg, aes(fill=cat, y=prop, x=exp_group)) +
 # run the same by municipalities
 
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+# import municipalities and select the municipalities in canton geneva
+muns = st_read("data/swissBOUNDARIES3D_1_5_TLM_HOHEITSGEBIET.shp")
+muns = muns[muns$KANTONSNUM==25,]
+muns = muns[!is.na(muns$KANTONSNUM),]
